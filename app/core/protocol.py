@@ -8,19 +8,38 @@ ROUTER_SCHEMA: dict = {
         "type": "object",
         "additionalProperties": False,
         "properties": {
-            "project": {"type": "string"},
+            "project": {
+                "type": "string"
+            },
             "mode": {
                 "type": "string",
                 "enum": [mode.value for mode in TaskMode],
             },
-            "task_name": {"type": "string"},
-            "user_intent": {"type": "string"},
-            "requires_approval": {"type": "boolean"},
+            "task_name": {
+                "type": "string"
+            },
+            "user_intent": {
+                "type": "string"
+            },
+            "requires_approval": {
+                "type": "boolean"
+            },
             "params": {
                 "type": "object",
-                "additionalProperties": True,
+                "additionalProperties": False,
+                "properties": {
+                    "topic": {"type": "string"},
+                    "output_format": {"type": "string"},
+                    "language": {"type": "string"},
+                    "audience": {"type": "string"},
+                    "deliverable_type": {"type": "string"},
+                    "scope": {"type": "string"}
+                },
+                "required": []
             },
-            "rationale": {"type": "string"},
+            "rationale": {
+                "type": "string"
+            },
         },
         "required": [
             "project",
