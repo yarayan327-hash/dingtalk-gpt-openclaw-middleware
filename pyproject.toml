@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dingtalk-gpt-openclaw-middleware"
+version = "0.1.0"
+description = "Local-first middleware to connect DingTalk, GPT and OpenClaw"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn>=0.30.0",
+  "pydantic>=2.8.0",
+  "pydantic-settings>=2.4.0",
+  "httpx>=0.27.0",
+  "openai>=1.99.0",
+  "python-dotenv>=1.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2.0",
+]
+
+[tool.setuptools]
+packages = ["app", "app.api", "app.core", "app.models", "app.services"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
