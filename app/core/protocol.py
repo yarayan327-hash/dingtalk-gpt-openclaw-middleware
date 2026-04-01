@@ -28,14 +28,21 @@ ROUTER_SCHEMA: dict = {
                 "type": "object",
                 "additionalProperties": False,
                 "properties": {
-                    "topic": {"type": "string"},
-                    "output_format": {"type": "string"},
-                    "language": {"type": "string"},
-                    "audience": {"type": "string"},
-                    "deliverable_type": {"type": "string"},
-                    "scope": {"type": "string"}
+                    "topic": {"type": ["string", "null"]},
+                    "output_format": {"type": ["string", "null"]},
+                    "language": {"type": ["string", "null"]},
+                    "audience": {"type": ["string", "null"]},
+                    "deliverable_type": {"type": ["string", "null"]},
+                    "scope": {"type": ["string", "null"]}
                 },
-                "required": []
+                "required": [
+                    "topic",
+                    "output_format",
+                    "language",
+                    "audience",
+                    "deliverable_type",
+                    "scope"
+                ]
             },
             "rationale": {
                 "type": "string"
