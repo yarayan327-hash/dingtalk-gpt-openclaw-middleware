@@ -30,40 +30,6 @@ ROUTER_SCHEMA: dict = {
                     "command": {"type": ["string", "null"]},
                     "path": {"type": ["string", "null"]},
                     "skill_name": {"type": ["string", "null"]},
-                    "agent_name": {"type": ["string", "null
-cat > app/core/protocol.py <<'PY'
-from app.models.task import OrchestratedTask, SystemAdvice, TaskMode
-
-
-ROUTER_SCHEMA: dict = {
-    "name": "middleware_router",
-    "strict": True,
-    "schema": {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "project": {"type": "string"},
-            "mode": {
-                "type": "string",
-                "enum": [mode.value for mode in TaskMode],
-            },
-            "target": {"type": "string"},
-            "task_name": {"type": "string"},
-            "user_intent": {"type": "string"},
-            "requires_approval": {"type": "boolean"},
-            "params": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "topic": {"type": ["string", "null"]},
-                    "output_format": {"type": ["string", "null"]},
-                    "language": {"type": ["string", "null"]},
-                    "audience": {"type": ["string", "null"]},
-                    "deliverable_type": {"type": ["string", "null"]},
-                    "scope": {"type": ["string", "null"]},
-                    "command": {"type": ["string", "null"]},
-                    "path": {"type": ["string", "null"]},
-                    "skill_name": {"type": ["string", "null"]},
                     "agent_name": {"type": ["string", "null"]},
                 },
                 "required": [
