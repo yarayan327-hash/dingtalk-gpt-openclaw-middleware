@@ -31,12 +31,64 @@ class OpenClawClient:
                 json=payload,
             )
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+
+        result.setdefault("command", command)
+        result.setdefault("cwd", cwd)
+        return result
 
     def system_run(self, task: OrchestratedTask) -> dict:
         command = task.params.get("command", "")
         cwd = task.params.get("path") or "."
-        return self._post_bridge(command=command, cwd=cwd)
+        result = self._post_bridge(command=command, cwd=cwd)
+        result["execution_mode"] = "system"
+        return result
+
+    def list_agents(self) -> dict:
+        result = self._post_bridge("openclaw agents list", cwd=".")
+        result["execution_mode"] = "capability_discovery"
+        result["discovery_type"] = "agents_list"
+        return result
+
+    def list_skills(self) -> dict:
+        result = self._post_bridge("openclaw skills list", cwd=".")
+        result["execution_mode"] = "capability_discovery"
+        result["discovery_type"] = "skills_list"
+        return result
+
+    def check_skills(self) -> dict:
+        result = self._post_bridge("openclaw skills check", cwd=".")
+        result["execution_mode"] = "capability_discovery"
+        result["discovery_type"] = "skills_check"
+        return result
+
+    def find_skills(self, task: OrchestratedTask) -> dict:
+        query = task.user_intent.strip() or task.task_name.strip()
+        payload = {
+            "task_name": task.task_name,
+            "user_intent": task.user_intent,
+            "params": task.params,
+        }
+
+        command = (
+            f"printf '%s' {json.dumps(json.dumps(payload))} > /tmp/find_skills_input.json && "
+            f"echo '[SIMULATED FIND SKILLS]' && "
+            f"echo 'query={query}' && "
+            f"echo '' && "
+            f"echo 'Suggested next steps:' && "
+            f"echo '1. openclaw skills list' && "
+            f"echo '2. openclaw skills check' && "
+            f"echo '3. openclaw skills info <skill_name>' && "
+            f"echo '' && "
+            f"echo 'Captured task payload:' && "
+            f"cat /tmp/find_skills_input.json"
+        )
+
+        result = self._post_bridge(command=command, cwd=".")
+        result["execution_mode"] = "capability_discovery"
+        result["discovery_type"] = "find_skills"
+        result["query"] = query
+        return result
 
     def skill_run(self, task: OrchestratedTask) -> dict:
         skill_name = task.target or task.params.get("skill_name", "")
@@ -55,7 +107,13 @@ class OpenClawClient:
             f"echo 'skill={skill_name}' && "
             f"cat /tmp/skill_input.json"
         )
-        return self._post_bridge(command=command, cwd=".")
+
+        result = self._post_bridge(command=command, cwd=".")
+        result["execution_mode"] = "simulated_skill"
+        result["requested_skill"] = skill_name
+        result["actual_skill"] = skill_name
+        result["fallback"] = False
+        return result
 
     def _agent_fallback(self, task: OrchestratedTask, requested_agent: str, reason: str) -> dict:
         payload = {
@@ -72,11 +130,13 @@ class OpenClawClient:
             f"echo 'reason={reason}' && "
             f"cat /tmp/agent_input.json"
         )
+
         result = self._post_bridge(command=command, cwd=".")
         result["requested_agent"] = requested_agent
         result["actual_agent"] = "main"
         result["fallback"] = True
         result["fallback_reason"] = reason
+        result["execution_mode"] = "simulated_agent_fallback"
         return result
 
     def agent_run(self, task: OrchestratedTask) -> dict:
@@ -101,6 +161,7 @@ class OpenClawClient:
             result["requested_agent"] = requested_agent
             result["actual_agent"] = actual_agent
             result["fallback"] = False
+            result["execution_mode"] = "real_agent"
             return result
         except Exception as exc:
             return self._agent_fallback(
