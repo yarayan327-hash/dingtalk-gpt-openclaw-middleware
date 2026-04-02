@@ -22,6 +22,7 @@ class OpenClawClient:
         payload = {
             "command": command,
             "cwd": cwd,
+            "node_id": "1cf849c4f89027ab102e482ac23dcbcd4070b9f9d8ba260d395c3d6806f0fa53",
         }
 
         with httpx.Client(timeout=180) as client:
