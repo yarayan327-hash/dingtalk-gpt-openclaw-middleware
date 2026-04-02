@@ -57,8 +57,29 @@ class OpenClawClient:
         )
         return self._post_bridge(command=command, cwd=".")
 
+    def _agent_fallback(self, task: OrchestratedTask, requested_agent: str, reason: str) -> dict:
+        payload = {
+            "task_name": task.task_name,
+            "user_intent": task.user_intent,
+            "params": task.params,
+        }
+
+        command = (
+            f"printf '%s' {json.dumps(json.dumps(payload))} > /tmp/agent_input.json && "
+            f"echo '[SIMULATED AGENT FALLBACK]' && "
+            f"echo 'requested_agent={requested_agent}' && "
+            f"echo 'actual_agent=main' && "
+            f"echo 'reason={reason}' && "
+            f"cat /tmp/agent_input.json"
+        )
+        result = self._post_bridge(command=command, cwd=".")
+        result["requested_agent"] = requested_agent
+        result["actual_agent"] = "main"
+        result["fallback"] = True
+        result["fallback_reason"] = reason
+        return result
+
     def agent_run(self, task: OrchestratedTask) -> dict:
-        # Phase 1 先统一回退到现有 main agent，避免 GPT 生成不存在的 agent 名称导致失败
         requested_agent = task.target or task.params.get("agent_name", "") or "main"
         actual_agent = "main"
 
@@ -70,13 +91,20 @@ class OpenClawClient:
             f"openclaw agent "
             f"--agent {quoted_agent} "
             f"--message {quoted_message} "
-            f"--thinking medium "
-            f"--timeout 600 "
+            f"--thinking low "
+            f"--timeout 90 "
             f"--json"
         )
 
-        result = self._post_bridge(command=command, cwd=".")
-
-        result["requested_agent"] = requested_agent
-        result["actual_agent"] = actual_agent
-        return result
+        try:
+            result = self._post_bridge(command=command, cwd=".")
+            result["requested_agent"] = requested_agent
+            result["actual_agent"] = actual_agent
+            result["fallback"] = False
+            return result
+        except Exception as exc:
+            return self._agent_fallback(
+                task=task,
+                requested_agent=requested_agent,
+                reason=str(exc),
+            )
