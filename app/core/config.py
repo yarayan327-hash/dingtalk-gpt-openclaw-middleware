@@ -13,10 +13,8 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-5.4"
     openai_reasoning_effort: str = "medium"
 
-    openclaw_base_url: str = "http://127.0.0.1:3000"
-    openclaw_execute_url: str = ""
-    openclaw_api_key: str = ""
-    openclaw_timeout_seconds: int = 60
+    openclaw_bridge_url: str = ""
+    openclaw_bridge_token: str = ""
 
     dingtalk_app_secret: str = ""
     dingtalk_callback_token: str = ""
