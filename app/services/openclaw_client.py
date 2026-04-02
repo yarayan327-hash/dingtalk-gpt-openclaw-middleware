@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 
 import httpx
 
@@ -61,16 +62,16 @@ class OpenClawClient:
         if not agent_name:
             raise ValueError("missing agent_name for agent mode")
 
-        payload = {
-            "task_name": task.task_name,
-            "user_intent": task.user_intent,
-            "params": task.params,
-        }
+        message = task.user_intent.strip() or task.task_name
+        quoted_agent = shlex.quote(agent_name)
+        quoted_message = shlex.quote(message)
 
         command = (
-            f"printf '%s' {json.dumps(json.dumps(payload))} > /tmp/agent_input.json && "
-            f"echo '[SIMULATED AGENT RUN]' && "
-            f"echo 'agent={agent_name}' && "
-            f"cat /tmp/agent_input.json"
+            f"openclaw agent "
+            f"--agent {quoted_agent} "
+            f"--message {quoted_message} "
+            f"--thinking medium "
+            f"--timeout 600 "
+            f"--json"
         )
         return self._post_bridge(command=command, cwd=".")
