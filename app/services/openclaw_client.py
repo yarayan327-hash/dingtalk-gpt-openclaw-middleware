@@ -58,12 +58,12 @@ class OpenClawClient:
         return self._post_bridge(command=command, cwd=".")
 
     def agent_run(self, task: OrchestratedTask) -> dict:
-        agent_name = task.target or task.params.get("agent_name", "")
-        if not agent_name:
-            raise ValueError("missing agent_name for agent mode")
+        # Phase 1 先统一回退到现有 main agent，避免 GPT 生成不存在的 agent 名称导致失败
+        requested_agent = task.target or task.params.get("agent_name", "") or "main"
+        actual_agent = "main"
 
         message = task.user_intent.strip() or task.task_name
-        quoted_agent = shlex.quote(agent_name)
+        quoted_agent = shlex.quote(actual_agent)
         quoted_message = shlex.quote(message)
 
         command = (
@@ -74,4 +74,9 @@ class OpenClawClient:
             f"--timeout 600 "
             f"--json"
         )
-        return self._post_bridge(command=command, cwd=".")
+
+        result = self._post_bridge(command=command, cwd=".")
+
+        result["requested_agent"] = requested_agent
+        result["actual_agent"] = actual_agent
+        return result
