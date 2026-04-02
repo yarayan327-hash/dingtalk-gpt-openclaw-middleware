@@ -1,91 +1,66 @@
-cat > /Users/jin/Desktop/dingtalk-gpt-openclaw-middleware/app/services/dingtalk_service.py <<'PY'
-from app.models.dingtalk import DingTalkOutboundMessage
-from app.models.task import OrchestratedTask
+from app.models.dingtalk import DingTalkInboundMessage, DingTalkOutboundMessage
+from app.models.task import TaskMode
+from app.services.dingtalk_service import DingTalkService
+from app.services.openai_router import OpenAIRouterService
+from app.services.openclaw_client import OpenClawClient
+from app.services.task_store import TaskStore
 
 
-class DingTalkService:
-    def format_reply_result(
-        self,
-        conversation_id: str,
-        answer_text: str,
-        task: OrchestratedTask,
-    ) -> DingTalkOutboundMessage:
-        advice_block = ""
-        if task.system_advice.value != "none":
-            advice_block = (
-                "\n\n---\n"
-                f"系统建议：{task.system_advice.value}\n"
-                f"原因：{task.system_advice_reason}"
+class OrchestratorService:
+    def __init__(self) -> None:
+        self.router = OpenAIRouterService()
+        self.dingtalk = DingTalkService()
+        self.store = TaskStore()
+        self.openclaw = OpenClawClient()
+
+    def handle_message(self, inbound: DingTalkInboundMessage) -> DingTalkOutboundMessage:
+        try:
+            task = self.router.route(inbound.text)
+            self.store.save_task(task)
+
+            if task.mode == TaskMode.reply:
+                answer = self.router.answer(inbound.text, task)
+                return self.dingtalk.format_reply_result(
+                    inbound.conversation_id,
+                    answer,
+                    task,
+                )
+
+            if task.mode == TaskMode.system:
+                result = self.openclaw.system_run(task)
+                return self.dingtalk.format_execution_result(
+                    inbound.conversation_id,
+                    task,
+                    result,
+                )
+
+            if task.mode == TaskMode.skill:
+                if task.target == "find-skills":
+                    result = self.openclaw.find_skills(task)
+                else:
+                    result = self.openclaw.skill_run(task)
+
+                return self.dingtalk.format_execution_result(
+                    inbound.conversation_id,
+                    task,
+                    result,
+                )
+
+            if task.mode == TaskMode.agent:
+                result = self.openclaw.agent_run(task)
+                return self.dingtalk.format_execution_result(
+                    inbound.conversation_id,
+                    task,
+                    result,
+                )
+
+            return self.dingtalk.format_failure(
+                inbound.conversation_id,
+                f"unsupported mode: {task.mode.value}",
             )
 
-        return DingTalkOutboundMessage(
-            conversation_id=conversation_id,
-            text=f"{answer_text}{advice_block}",
-        )
-
-    def _truncate(self, text: str, limit: int = 3500) -> str:
-        text = text.strip()
-        if len(text) <= limit:
-            return text
-        return text[:limit] + "\n\n[内容已截断]"
-
-    def format_execution_result(
-        self,
-        conversation_id: str,
-        task: OrchestratedTask,
-        result: dict,
-    ) -> DingTalkOutboundMessage:
-        ok = result.get("ok", False)
-        exit_code = result.get("exitCode")
-        stdout = (result.get("stdout", "") or "").strip()
-        stderr = (result.get("stderr", "") or "").strip()
-
-        title_map = {
-            "system": "⚙️ System 执行结果",
-            "skill": "🧩 Skill 执行结果",
-            "agent": "🤖 Agent 执行结果",
-        }
-        title = title_map.get(task.mode.value, "执行结果")
-
-        lines = [
-            title,
-            f"模式：{task.mode.value}",
-            f"目标：{task.target or '-'}",
-            f"任务：{task.task_name}",
-            f"状态：{'success' if ok else 'failed'}",
-            f"exitCode：{exit_code}",
-        ]
-
-        command = result.get("command")
-        if command:
-            lines += ["", f"执行命令：{command}"]
-
-        if stdout:
-            lines += ["", "输出：", self._truncate(stdout)]
-
-        if stderr:
-            lines += ["", "错误：", self._truncate(stderr, limit=1200)]
-
-        if task.system_advice.value != "none":
-            lines += [
-                "",
-                "---",
-                f"系统建议：{task.system_advice.value}",
-                f"原因：{task.system_advice_reason}",
-            ]
-
-        return DingTalkOutboundMessage(
-            conversation_id=conversation_id,
-            text="\n".join(lines),
-        )
-
-    def format_failure(
-        self,
-        conversation_id: str,
-        message: str,
-    ) -> DingTalkOutboundMessage:
-        return DingTalkOutboundMessage(
-            conversation_id=conversation_id,
-            text=f"❌ 执行失败\n{message}",
-        )
-PY
+        except Exception as exc:
+            return self.dingtalk.format_failure(
+                inbound.conversation_id,
+                str(exc),
+            )
