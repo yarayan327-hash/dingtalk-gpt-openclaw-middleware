@@ -1,4 +1,3 @@
-cat > /Users/jin/Desktop/dingtalk-gpt-openclaw-middleware/app/services/openclaw_client.py <<'PY'
 from __future__ import annotations
 
 import json
@@ -77,4 +76,3 @@ class OpenClawClient:
             f"cat /tmp/agent_input.json"
         )
         return self._post_bridge(command=command, cwd=".")
-PY
