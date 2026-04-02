@@ -1,4 +1,3 @@
-cat > /Users/jin/Desktop/dingtalk-gpt-openclaw-middleware/app/services/dingtalk_service.py <<'PY'
 from app.models.dingtalk import DingTalkOutboundMessage
 from app.models.task import OrchestratedTask
 
@@ -88,4 +87,3 @@ class DingTalkService:
             conversation_id=conversation_id,
             text=f"❌ 执行失败\n{message}",
         )
-PY
