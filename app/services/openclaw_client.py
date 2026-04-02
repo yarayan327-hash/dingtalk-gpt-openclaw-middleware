@@ -49,7 +49,6 @@ class OpenClawClient:
         }
 
         command = (
-            f"cd /home/admin/.openclaw/workspace && "
             f"printf '%s' {json.dumps(json.dumps(payload))} > /tmp/skill_input.json && "
             f"echo '[SIMULATED SKILL RUN]' && "
             f"echo 'skill={skill_name}' && "
@@ -69,7 +68,6 @@ class OpenClawClient:
         }
 
         command = (
-            f"cd /home/admin/.openclaw/workspace && "
             f"printf '%s' {json.dumps(json.dumps(payload))} > /tmp/agent_input.json && "
             f"echo '[SIMULATED AGENT RUN]' && "
             f"echo 'agent={agent_name}' && "
